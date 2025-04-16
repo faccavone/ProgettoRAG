@@ -1,0 +1,57 @@
+python -m cProfile -o profile_output.prof main.py #per avviare il codice e usare il profiler e salvare tutto su un file
+snakeviz profile_output.prof #per vedere graficamente i risultati del profiling
+
+
+import sys
+import os
+import concurrent.futures
+from tqdm import tqdm
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from data_processing.pdf_loader import read_pdfs_from_folder
+from data_processing.text_chunker import chunk_text
+from data_processing.contextualizer import generate_chunk_context
+from config.settings import CHUNK_SIZE, OVERLAP, PDF_FOLDER
+
+def process_chunk(text: str, chunk: str) -> tuple[str, str]:
+    """Genera contesto per un chunk, restituisce coppia (context, chunk)"""
+    try:
+        context = generate_chunk_context(text, chunk)
+    except Exception as e:
+        context = f"⚠️ Errore nella generazione del contesto: {e}"
+    return context, chunk
+
+print("📄 Caricamento PDF in corso...")
+
+# Carica i PDF con barra di progresso
+pdfs = read_pdfs_from_folder(PDF_FOLDER)
+
+if not pdfs:
+    print("❌ Nessun PDF trovato nella cartella.")
+    sys.exit(1)
+
+# Barra di avanzamento per ogni PDF
+for pdf_index, (name, text) in enumerate(tqdm(pdfs, desc="📘 Caricamento Documenti", unit="doc")):
+    print(f"\n📘 Documento {pdf_index + 1}: {name}")
+
+    # Suddivide il testo in chunk
+    chunks = chunk_text(text, CHUNK_SIZE, OVERLAP)
+    print(f"✂️ Suddiviso in {len(chunks)} chunk(s)")
+
+    # Barra di avanzamento per il processing dei chunk
+    contextualized_chunks = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(process_chunk, text, chunk) for chunk in chunks]
+
+        for i, future in enumerate(tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc=f"📥 Elaborazione {name}")):
+            context, chunk = future.result()
+
+            print(f"\n=== [{name}] CHUNK {i + 1} ===")
+            print(f"\n🔹 Context:\n{context}")
+           # print(f"\n🔸 Original Chunk:\n{chunk}")
+
+            contextualized_chunk = f"{context}\n\n{chunk}"
+           # print(f"\n🧠 Contextualized Chunk:\n{contextualized_chunk}")
+
+            contextualized_chunks.append(contextualized_chunk)

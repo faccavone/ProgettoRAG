@@ -1,0 +1,37 @@
+# 📦 Ambiente virtuale
+venv/
+.env/
+*.env
+
+# 🧪 File di profiling o performance
+src/profile_output.prof
+
+# 📝 File temporanei o personali
+rag+sql.py
+
+# 🗑️ Altri file Python comuni da ignorare
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# 📁 IDE/editor config
+.vscode/
+.idea/
+*.swp
+
+# 📦 Pacchetti/compressi
+*.zip
+*.tar.gz
+*.egg-info/
+
+# 🧪 Test cache
+.cache/
+pytest_cache/
+
+# 📊 File di log
+*.log
+
+# 📷 Jupyter (se usi)
+.ipynb_checkpoints/
