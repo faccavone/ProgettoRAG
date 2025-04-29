@@ -36,5 +36,5 @@ else:
         print(f"\n🔸 Original Chunk:\n{chunk}")
 
         # Mostra il risultato finale
-        contextualized_chunk = f"{context}\n\n{chunk}"
-        print(f"\n🧠 Contextualized Chunk:\n{contextualized_chunk}")
+        # contextualized_chunk = f"{context}\n\n{chunk}"
+        # print(f"\n🧠 Contextualized Chunk:\n{contextualized_chunk}")
