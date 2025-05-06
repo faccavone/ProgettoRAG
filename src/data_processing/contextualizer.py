@@ -1,18 +1,31 @@
-import requests
-from config.settings import HUGGINGFACE_API_KEY
+import os
+from groq import Groq
+from config.settings import GROQ_API_KEY
 
-API_URL = "http://localhost:1234/v1/chat/completions"
+# 🌐 Inizializzazione del client GROQ
+client = Groq(api_key=GROQ_API_KEY)
 
-def generate_chunk_context(document: str, chunk: str) -> str:
-    # Aggiungi il marker "📌 **Risposta:**" nel prompt
+def build_chunk_context_window(chunks: list[str], current_index: int, window_size: int = 3) -> str:
+    """
+    Costruisce un contesto limitato ai chunk vicini al chunk corrente.
+    Include i `window_size` chunk precedenti e successivi rispetto al chunk in posizione `current_index`.
+    """
+    start = max(0, current_index - window_size)
+    end = min(len(chunks), current_index + window_size + 1)
+    context_chunks = chunks[start:end]
+    
+    return "\n".join(context_chunks)
+
+def generate_chunk_context(context_window: str, target_chunk: str) -> str:
+    # 📌 Prompt con marker
     prompt = f"""
 <document>
-{document}
+{context_window}
 </document>
 
 Qui c'è il chunk che vogliamo contestualizzare all'interno dell'intero documento:
 <chunk>
-{chunk}
+{target_chunk}
 </chunk>
 
 Per favore, fornisci un contesto breve e chiaro che descriva la posizione e il significato di questo chunk
@@ -21,33 +34,32 @@ Rispondi esclusivamente con il contesto richiesto, senza aggiungere altro.
 
 📌 **Risposta:**
     """
-    
-    payload = {
-    "model": "llama-3.2-1b-instruct",  # <-- assicurati di includere il nome del modello
-    "messages": [
-  {
-    "role": "system",
-    "content": "Sei un assistente che analizza documenti e genera contesto per dei frammenti di testo. Rispondi sempre con una descrizione concisa."
-  },
-  {
-    "role": "user",
-    "content": "<document>\n{document}\n</document>\n\n<chunk>\n{chunk}\n</chunk>\n\n📌 **Risposta:**"
-  }
-],
-    "max_tokens": 100
-    }
+
+    # Creazione del payload da inviare
+    messages = [
+        {
+            "role": "system",
+            "content": "Sei un assistente che analizza documenti e genera contesto per dei frammenti di testo. Rispondi sempre con una descrizione concisa."
+        },
+        {
+            "role": "user",
+            "content": prompt.strip()
+        }
+    ]
 
     try:
-        response = requests.post(API_URL, json=payload)
-        response.raise_for_status()
+        # Invio della richiesta al modello utilizzando GROQ
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model="gemma2-9b-it",  # Utilizza il modello che desideri
+            max_completion_tokens=100,  # Imposta i token massimi
+            temperature=0.3
+        )
 
-        result = response.json()
-        if "choices" in result and len(result["choices"]) > 0:
-            raw_text = result["choices"][0]["message"]["content"].strip()
-        else:
-            return "⚠️ Errore: risposta vuota dal modello."
+        # Estrai il risultato dalla risposta
+        raw_text = chat_completion.choices[0].message.content.strip()
 
-        # Estrai solo la parte dopo il marker (opzionale)
+        # 🧼 Pulizia del testo generato
         marker = "📌 **Risposta:**"
         if marker in raw_text:
             cleaned_text = raw_text.split(marker)[1].strip()
@@ -56,9 +68,6 @@ Rispondi esclusivamente con il contesto richiesto, senza aggiungere altro.
 
         return cleaned_text
 
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Errore nella generazione del contesto: {e}")
-        return f"⚠️ Errore nella richiesta API: {e}"
     except Exception as e:
-        print(f"❌ Errore generico: {e}")
-        return f"⚠️ Errore generico: {e}"
+        print(f"❌ Errore nella generazione del contesto: {e}")
+        return f"⚠️ Errore: {e}"
