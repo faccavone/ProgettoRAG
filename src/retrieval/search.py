@@ -104,8 +104,6 @@ def search_documents(query, top_k=TOP_K, initial_k = INITIAL_K):
     if len(query) < 3:
         return ["⚠️ La query è troppo breve per una ricerca significativa."]
 
-    print(f"\n🔍 Eseguo ricerca per: {query}")
-
     # 🔹 Recupero documenti da entrambi i motori di ricerca, recupero iniziale
     emb_results = embedding_search(query, initial_k)
     bm25_results = bm25_search(query, initial_k)
@@ -122,12 +120,5 @@ def search_documents(query, top_k=TOP_K, initial_k = INITIAL_K):
         for (text, source, score) in reranked_results
         if score >= SIMILARITY_THRESHOLD
     ]
-
-    print("\n📚 Chunk Selezionati (Dopo Reranking + Filtro):")
-    for i, (text, source, score) in enumerate(filtered_results, 1):
-        print(f"{i}. Source: {source} - Testo: {text[:1000]} - Score {score}\n")
-
-    if not filtered_results:
-        return ["❌ Nessun documento supera la soglia di similarità impostata."]
 
     return filtered_results[:top_k]

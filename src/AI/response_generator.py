@@ -1,57 +1,54 @@
-from config.settings import HUGGINGFACE_API_KEY
-import aiohttp  # Per gestire richieste HTTP in modo asincrono
-import asyncio  # Per gestire le coroutine asincrone
+import os
+from groq import Groq
+from config.settings import GROQ_API_KEY
 
-# 📌 Funzione asincrona che invia una richiesta al modello locale (via LM Studio) per generare una risposta basata su un contesto
-async def generate_answer_async(context, question):
-    API_URL = "http://localhost:1234/v1/completions"  # Endpoint del modello LM Studio
+# Inizializza il client GROQ
+client = Groq(api_key=GROQ_API_KEY)
 
-    # Prompt dettagliato che istruisce il modello su come comportarsi durante la generazione della risposta
+def generate_answer(context: str, question: str) -> str:
+    """
+    Usa GROQ e LLaMA 4 Scout per generare una risposta basata sul contesto fornito.
+    """
+    # Prompt con istruzioni dettagliate
     prompt = f"""
-    Sei un assistente esperto di recupero aumentato di informazioni (RAG), specializzato nell'elaborare risposte basate esclusivamente sul contesto fornito.
+    Sei un assistente AI specializzato in Recupero Aumentato di Informazioni (RAG). 
+    La tua funzione è fornire risposte **solo** in base al contesto fornito, senza inventare o aggiungere contenuti esterni.
 
-    🎯 Istruzioni:
-    - Leggi con attenzione tutti i documenti del contesto.
-    - Rispondi in modo chiaro, coerente e ben strutturato.
-    - NON ripetere contenuti simili o identici.
-    - NON aggiungere contenuti esterni al contesto.
-    - Se le informazioni nel contesto sono insufficienti, dillo chiaramente.
+    📚 Contesto:
+    {context}
 
-    📌 **Contesto:**  
-    {context}  
+    ❓ Domanda:
+    {question}
 
-    📌 **Domanda:**  
-    {question}  
+    ✍️ Istruzioni:
+    - Analizza attentamente il contesto.
+    - Rispondi con chiarezza, precisione e struttura logica.
+    - Evita ripetizioni e ridondanze.
+    - Se il contesto non è sufficiente per rispondere, dichiara esplicitamente che non ci sono abbastanza informazioni.
 
     📌 **Risposta:**  
-    """
+        """
 
-    # Corpo della richiesta HTTP: specifica il modello, prompt e parametri di generazione
-    payload = {
-        "model": "llama-3.2-1b-instruct",  # Nome del modello usato (compatibile con LM Studio)
-        "prompt": prompt,
-        "max_tokens": 600,  # Numero massimo di token nella risposta
-        "temperature": 0.3,  # Controlla la creatività della risposta
-        "top_p": 0.5  # Probabilità cumulativa per filtrare token
-    }
+    messages = [
+        {"role": "system", "content": "Sei un assistente specializzato in domande tecniche con capacità avanzate di comprensione del contesto."},
+        {"role": "user", "content": prompt.strip()}
+    ]
 
-    # Avvia una sessione HTTP asincrona per inviare la richiesta POST al modello
-    async with aiohttp.ClientSession() as session:
-        async with session.post(API_URL, json=payload) as response:
-            response_data = await response.json()  # Attende e converte la risposta JSON
+    try:
+        response = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=messages,
+            temperature=0.3,
+            max_tokens=700
+        )
+        answer = response.choices[0].message.content.strip()
 
-            # 📌 Estrae la risposta generata (se disponibile) in base al formato restituito
-            if isinstance(response_data, list) and len(response_data) > 0 and "generated_text" in response_data[0]:
-                raw_text = response_data[0]["generated_text"]
-            elif isinstance(response_data, dict) and "generated_text" in response_data:
-                raw_text = response_data["generated_text"]
-            else:
-                return "⚠️ Errore: la risposta dell'API non contiene una risposta valida."
+        # Pulizia opzionale
+        marker = "📌 **Risposta:**"
+        if marker in answer:
+            return answer.split(marker)[1].strip()
+        else:
+            return answer
 
-            # Rimuove eventuali duplicazioni o intestazioni nel testo restituito
-            cleaned_text = raw_text.split("📌 **Risposta:**")[1].strip() if "📌 **Risposta:**" in raw_text else raw_text
-            return cleaned_text
-
-# 📌 Funzione sincrona che lancia la coroutine asincrona per ottenere una risposta
-def async_generate_answer(context, question):
-    return asyncio.run(generate_answer_async(context, question))  # Esegue la funzione asincrona con il loop asyncio
+    except Exception as e:
+        return f"⚠️ Errore durante la generazione con GROQ: {e}"

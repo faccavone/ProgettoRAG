@@ -1,4 +1,4 @@
-import os
+import time
 from groq import Groq
 from config.settings import GROQ_API_KEY
 
@@ -71,3 +71,29 @@ Rispondi esclusivamente con il contesto richiesto, senza aggiungere altro.
     except Exception as e:
         print(f"❌ Errore nella generazione del contesto: {e}")
         return f"⚠️ Errore: {e}"
+
+def process_chunks_with_pause(chunks: list[str], window_size: int = 3, chunk_limit_per_minute: int = 3):
+    """
+    Elabora i chunk in modo che non vengano superati i limiti di token per minuto.
+    Dopo ogni 4 chiamate, attende 1 minuto.
+    """
+    call_count = 0  # Conta le chiamate effettuate
+    results = []
+
+    for index, chunk in enumerate(chunks):
+        # Creazione della finestra di contesto per il chunk corrente
+        context_window = build_chunk_context_window(chunks, index, window_size)
+
+        # Generazione del contesto per il chunk
+        context = generate_chunk_context(context_window, chunk)
+        results.append((chunk, context))
+
+        call_count += 1
+
+        # Se sono state fatte 4 chiamate, aspetta 1 minuto prima di continuare
+        if call_count >= chunk_limit_per_minute:
+            print("🕒 Limite di chiamate al minuto raggiunto. Pausa di 1 minuto...")
+            time.sleep(60)  # Pausa di 1 minuto
+            call_count = 0  # Reset del contatore delle chiamate
+
+    return results

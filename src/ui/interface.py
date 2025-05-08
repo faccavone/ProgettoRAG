@@ -1,12 +1,12 @@
 import gradio as gr
 from retrieval.search import search_documents  # Corretto import per la ricerca
-from AI.response_generator import async_generate_answer  # Corretto percorso
+from AI.response_generator import generate_answer  # Corretto percorso
 
 # 📌 Funzione per la UI
 def chatbot_interface(question):
     retrieved_docs = search_documents(question)
     context = " ".join([doc[0] for doc in retrieved_docs])  # Unisce i documenti trovati
-    answer = async_generate_answer(context, question)
+    answer = generate_answer(context, question)
     return answer
 
 # 📌 Configura Gradio UI
