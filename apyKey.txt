@@ -15,3 +15,14 @@ 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   chiave 3
 GROQ key:
 
 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
+
+NEO4J:
+
+Username: neo4j
+
+Password: FCrfe(kvpr7UEbn
+
+GEMINI key: AIzaSyAt6h3SfV659TXo4qureoeUmuWZgnXl6Bg
+
+Modello	                                RPM	TPM	    RPD
+Anteprima di Gemini 2.5 Flash 05-2  	10	250.000	500
