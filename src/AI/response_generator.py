@@ -1,54 +1,46 @@
-import os
-from groq import Groq
-from config.settings import GROQ_API_KEY
+import google.generativeai as genai
+from config.settings import GEMINI_API_KEY
 
-# Inizializza il client GROQ
-client = Groq(api_key=GROQ_API_KEY)
+# ✅ Configura Gemini
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-2.0-flash")  
 
 def generate_answer(context: str, question: str) -> str:
     """
-    Usa GROQ e LLaMA 4 Scout per generare una risposta basata sul contesto fornito.
+    Usa Gemini per generare una risposta basata sul contesto fornito.
     """
-    # Prompt con istruzioni dettagliate
     prompt = f"""
-    Sei un assistente AI specializzato in Recupero Aumentato di Informazioni (RAG). 
-    La tua funzione è fornire risposte **solo** in base al contesto fornito, senza inventare o aggiungere contenuti esterni.
+Sei un assistente AI specializzato in Recupero Aumentato di Informazioni (RAG). 
+La tua funzione è fornire risposte **solo** in base al contesto fornito, senza inventare o aggiungere contenuti esterni.
 
-    📚 Contesto:
-    {context}
+📚 Contesto:
+{context}
 
-    ❓ Domanda:
-    {question}
+❓ Domanda:
+{question}
 
-    ✍️ Istruzioni:
-    - Analizza attentamente il contesto.
-    - Rispondi con chiarezza, precisione e struttura logica.
-    - Evita ripetizioni e ridondanze.
-    - Se il contesto non è sufficiente per rispondere, dichiara esplicitamente che non ci sono abbastanza informazioni.
+✍️ Istruzioni:
+- Analizza attentamente il contesto.
+- Rispondi con chiarezza, precisione e struttura logica.
+- Evita ripetizioni e ridondanze.
+- Se il contesto non è sufficiente per rispondere, dichiara esplicitamente che non ci sono abbastanza informazioni.
 
-    📌 **Risposta:**  
-        """
-
-    messages = [
-        {"role": "system", "content": "Sei un assistente specializzato in domande tecniche con capacità avanzate di comprensione del contesto."},
-        {"role": "user", "content": prompt.strip()}
-    ]
+📌 **Risposta:**
+    """
 
     try:
-        response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            messages=messages,
-            temperature=0.3,
-            max_tokens=700
+        response = model.generate_content(
+            prompt.strip(),
+            generation_config={
+                "temperature": 0.3,
+                "max_output_tokens": 1000
+            }
         )
-        answer = response.choices[0].message.content.strip()
+        answer = response.text.strip()
 
-        # Pulizia opzionale
+        # Rimuove eventualmente il marcatore finale
         marker = "📌 **Risposta:**"
-        if marker in answer:
-            return answer.split(marker)[1].strip()
-        else:
-            return answer
+        return answer.split(marker)[-1].strip() if marker in answer else answer
 
     except Exception as e:
-        return f"⚠️ Errore durante la generazione con GROQ: {e}"
+        return f"⚠️ Errore durante la generazione con Gemini: {e}"

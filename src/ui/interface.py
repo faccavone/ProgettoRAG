@@ -11,7 +11,7 @@ def chatbot_interface(question):
 
 # 📌 Configura Gradio UI
 with gr.Blocks() as demo:
-    gr.Markdown("# 🔍 RAG Chatbot con Pinecone & Hugging Face")
+    gr.Markdown("# 🔍 RAG Chatbot")
     question_input = gr.Textbox(label="Inserisci la tua domanda")
     answer_output = gr.Textbox(label="Risposta generata", interactive=False)
     ask_button = gr.Button("Chiedi")

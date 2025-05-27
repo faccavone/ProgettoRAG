@@ -6,7 +6,7 @@ from config.settings import GEMINI_API_KEY
 genai.configure(api_key=GEMINI_API_KEY)
 
 # Inizializza il modello Gemini 2.5 Flash
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 def build_chunk_context_window(chunks: list[str], current_index: int, window_size: int = 10) -> str:
     start = max(0, current_index - window_size)
