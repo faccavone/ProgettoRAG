@@ -2,3 +2,8 @@ python -m cProfile -o profile_output.prof main.py #per avviare il codice e usare
 snakeviz profile_output.prof #per vedere graficamente i risultati del profiling
 
 
+modelli da usare :
+
+llama3:8b   //per risposte RAG e creazione del contesto per ogni chunk  
+
+llava:7b     //per generare la descrizione delle immagini per poi inserirla nel VectorDB

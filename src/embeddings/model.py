@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 
-# Carica il modello di embedding
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# Carica il modello di embedding all-mpnet-base-v2
+model = SentenceTransformer("all-mpnet-base-v2")
 
 def generate_embedding(text):
     """

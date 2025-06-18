@@ -1,46 +1,44 @@
-import google.generativeai as genai
-from config.settings import GEMINI_API_KEY
-
-# ✅ Configura Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.0-flash")  
+import subprocess
 
 def generate_answer(context: str, question: str) -> str:
     """
-    Usa Gemini per generare una risposta basata sul contesto fornito.
+    Usa un modello LLaMA locale (via Ollama) per generare una risposta basata sul contesto fornito.
+    Il modello risponde solo sulla base del contesto, in stile RAG.
     """
+
     prompt = f"""
-Sei un assistente AI specializzato in Recupero Aumentato di Informazioni (RAG). 
-La tua funzione è fornire risposte **solo** in base al contesto fornito, senza inventare o aggiungere contenuti esterni.
+    Sei un assistente AI specializzato in Recupero Aumentato di Informazioni (RAG). 
+    La tua funzione è fornire risposte **solo** in base al contesto fornito, senza inventare o aggiungere contenuti esterni.
 
-📚 Contesto:
-{context}
+    📚 Contesto:
+    {context}
 
-❓ Domanda:
-{question}
+    ❓ Domanda:
+    {question}
 
-✍️ Istruzioni:
-- Analizza attentamente il contesto.
-- Rispondi con chiarezza, precisione e struttura logica.
-- Evita ripetizioni e ridondanze.
-- Se il contesto non è sufficiente per rispondere, dichiara esplicitamente che non ci sono abbastanza informazioni.
+    ✍️ Istruzioni:
+    - Analizza attentamente il contesto.
+    - Rispondi con chiarezza, precisione e struttura logica.
+    - Evita ripetizioni e ridondanze.
+    - Se il contesto non è sufficiente per rispondere, dichiara esplicitamente che non ci sono abbastanza informazioni.
 
-📌 **Risposta:**
+    📌 **Risposta:**
     """
 
     try:
-        response = model.generate_content(
-            prompt.strip(),
-            generation_config={
-                "temperature": 0.3,
-                "max_output_tokens": 1000
-            }
+        result = subprocess.run(
+            ["ollama", "run", "llama3"],  
+            input=prompt.encode("utf-8"),
+            capture_output=True,
+            check=True
         )
-        answer = response.text.strip()
 
-        # Rimuove eventualmente il marcatore finale
+        # Estrai la risposta
+        raw_output = result.stdout.decode("utf-8").strip()
+
+        # Se il modello restituisce anche il prompt, prendi solo la parte dopo 📌 **Risposta:**
         marker = "📌 **Risposta:**"
-        return answer.split(marker)[-1].strip() if marker in answer else answer
+        return raw_output.split(marker)[-1].strip() if marker in raw_output else raw_output
 
-    except Exception as e:
-        return f"⚠️ Errore durante la generazione con Gemini: {e}"
+    except subprocess.CalledProcessError as e:
+        return f"⚠️ Errore nella generazione della risposta: {e.stderr.decode(errors='ignore')}"
