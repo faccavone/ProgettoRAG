@@ -1,9 +1,8 @@
 import chromadb
 from chromadb.config import Settings
 
-client = chromadb.Client(Settings(
-    chroma_db_impl="duckdb+parquet",
-    persist_directory="./chroma_db"  # Cartella per la persistenza locale
-))
+persist_path = "./chroma_db"
 
-collection = client.get_or_create_collection("rag_chunks")
+client = chromadb.PersistentClient(path=persist_path)
+
+collection = client.get_or_create_collection("my_collection")

@@ -1,32 +1,52 @@
-import subprocess
+import requests
+import base64
+import json
 
 def generate_image_caption(image_path: str) -> str:
     """
-    Usa Ollama (modello LLaVA) per generare una descrizione dettagliata dell’immagine.
-
-    Args:
-        image_path (str): Percorso al file immagine
-
-    Returns:
-        str: Caption descrittiva generata dal modello
+    Usa LLaVA via Ollama API per generare descrizione dell'immagine (gestione risposta NDJSON).
     """
-    
-    # Prompt per il modello LLaVA
-    # Ottimizzato per generare descrizioni utili per la ricerca e il recupero
-    prompt = """
-    Sei un assistente incaricato di riassumere immagini per scopi di ricerca e recupero.
-    Questi riassunti saranno utilizzati per generare embedding e servire a ritrovare l’immagine originale.
-    Fornisci un riassunto conciso dell’immagine, ottimizzato per la ricerca.
-    """
+    prompt = (
+        "Sei un assistente incaricato di riassumere immagini per scopi di ricerca e recupero. "
+        "Questi riassunti saranno utilizzati per generare embedding e servire a ritrovare l’immagine originale. "
+        "Fornisci un riassunto conciso dell’immagine, ottimizzato per la ricerca."
+    )
+
     try:
-        result = subprocess.run(
-            ["ollama", "run", "llava", "--image", image_path],
-            input=prompt.encode("utf-8"),
-            capture_output=True,
-            check=True
-        )
-        return result.stdout.decode("utf-8").strip() 
+        with open(image_path, "rb") as image_file:
+            image_data = base64.b64encode(image_file.read()).decode("utf-8")
 
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Errore nella generazione della descrizione immagine: {e.stderr.decode(errors='ignore')}")
-        return f"⚠️ Errore nella descrizione immagine"
+        payload = {
+            "model": "llava",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                    "images": [image_data]
+                }
+            ]
+        }
+
+        response = requests.post("http://localhost:11434/api/chat", json=payload)
+        response.raise_for_status()
+
+        # La risposta è in NDJSON: parse riga per riga
+        full_content = ""
+        done = False
+
+        for line in response.text.strip().splitlines():
+            data = json.loads(line)
+            content = data.get("message", {}).get("content", "")
+            full_content += content
+            if data.get("done", False):
+                done = True
+                break
+
+        if not done:
+            print("⚠️ Attenzione: risposta incompleta (done: false)")
+
+        return full_content.strip()
+
+    except Exception as e:
+        print(f"❌ Errore nella generazione della descrizione immagine: {e}")
+        return "⚠️ Errore nella descrizione immagine"

@@ -1,58 +1,52 @@
-import gradio as gr
-from retrieval.search import search_documents
-from AI.response_generator import generate_answer
-from PIL import Image
+import sys
 import os
 
-# 📌 Funzione principale per la UI
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+import streamlit as st
+from retrieval.search import search_documents
+from AI.response_generator import generate_answer
+
 def chatbot_interface(question):
     retrieved_docs = search_documents(question)
 
-    # 🔹 Crea il contesto testuale (solo i testi dei risultati)
+    # Caso errore testuale (es. query troppo breve)
+    if isinstance(retrieved_docs, list) and len(retrieved_docs) == 1 and isinstance(retrieved_docs[0], str):
+        return retrieved_docs[0], []
+
+    # Costruzione contesto da chunk testuali + descrizioni immagine
     context_chunks = [doc["text"] for doc in retrieved_docs]
     context = " ".join(context_chunks)
 
-    # 🔹 Genera la risposta usando il contesto
+    # Risposta generata dal LLM
     answer = generate_answer(context, question)
 
-    # 🔹 Estrai immagini dai risultati se presenti
+    # Seleziona immagini valide da visualizzare (fino a 3)
     image_paths = [
-        doc["image_path"] for doc in retrieved_docs
-        if doc["type"] == "image" and doc.get("image_path") and os.path.exists(doc["image_path"])
+        doc.get("image_path") for doc in retrieved_docs
+        if doc.get("type") == "image" and doc.get("image_path") and os.path.exists(doc["image_path"])
     ]
 
-    return answer, image_paths
+    return answer, image_paths[:3]
 
-# 📌 Costruzione interfaccia Gradio
-with gr.Blocks() as demo:
-    gr.Markdown("# 🔍 RAG Chatbot con immagini recuperate")
+def main():
+    st.title("🔍 RAG Chatbot con immagini recuperate")
 
-    # Campo input domanda
-    question_input = gr.Textbox(label="Inserisci la tua domanda")
+    question = st.text_input("Inserisci la tua domanda")
 
-    # Campo output risposta generata
-    answer_output = gr.Textbox(label="Risposta generata", interactive=False)
+    if st.button("Chiedi") and question.strip() != "":
+        answer, images = chatbot_interface(question)
 
-    # Sezione immagini, racchiusa in un Accordion (collassabile)
-    with gr.Accordion("📸 Immagini recuperate", open=False):
-        image_gallery = gr.Gallery(
-            show_label=False,
-            visible=True,
-            height=300,
-            columns=3,
-            object_fit="contain"
-        )
+        st.markdown("### Risposta generata:")
+        st.write(answer)
 
-    # Pulsante invio domanda
-    ask_button = gr.Button("Chiedi")
+        if images:
+            st.markdown("### Immagini recuperate:")
+            cols = st.columns(len(images))
+            for col, img_path in zip(cols, images):
+                col.image(img_path, use_column_width=True)
+        else:
+            st.write("Nessuna immagine trovata.")
 
-    # Collegamento funzione → UI
-    ask_button.click(
-        fn=chatbot_interface,
-        inputs=question_input,
-        outputs=[answer_output, image_gallery]
-    )
-
-# 📌 Avvia la demo
-def start_interface():
-    demo.launch()
+if __name__ == "__main__":
+    main()

@@ -52,7 +52,7 @@ def embedding_search(query, top_k):
     results = collection.query(
         query_embeddings=[embedding],
         n_results=top_k,
-        include=["metadatas", "documents"]
+        include=["metadatas", "documents", "distances"]
     )
 
     matches = []
@@ -99,7 +99,7 @@ def reciprocal_rank_fusion(results_list, k=60):
 
 # === 🔎 ENTRY POINT ===
 
-def search_documents(query, top_k=TOP_K, initial_k=INITIAL_K):
+def search_documents(query, top_k=TOP_K, initial_k=INITIAL_K, filter_type=None):
     """
     Esegue una ricerca combinata BM25 + Embedding con reranking finale.
     Restituisce lista di dizionari con testo, fonte, tipo e immagine se presente.
@@ -131,3 +131,12 @@ def search_documents(query, top_k=TOP_K, initial_k=INITIAL_K):
             })
 
     return final_results[:top_k]
+
+# === 🖼️ RICERCA MIRATA IMMAGINI (usata dopo la risposta) ===
+
+def search_relevant_images(query_plus_answer, top_k=10):
+    results = embedding_search(query_plus_answer, top_k)
+    return [
+        doc for doc in results
+        if doc.get("type") == "image" and doc.get("image_path")
+    ]

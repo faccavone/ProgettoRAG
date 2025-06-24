@@ -1,4 +1,5 @@
 import subprocess
+from tqdm import tqdm
 
 def build_chunk_context_window(chunks: list[str], current_index: int, window_size: int = 10) -> str:
     """
@@ -47,12 +48,10 @@ def generate_chunk_context(context_window: str, target_chunk: str) -> str:
 
 def process_chunks_with_context(chunks: list[str], window_size: int = 10):
     """
-    Genera contesto per ogni chunk utilizzando una finestra di chunk attorno a quello corrente.
-    Restituisce una lista di tuple (chunk, context). 
-    
+    Genera contesto per ogni chunk, mostrando progresso con tqdm.
     """
     results = []
-    for index, chunk in enumerate(chunks):
+    for index, chunk in tqdm(enumerate(chunks), total=len(chunks), desc="🧠 Generazione contesto"):
         context_window = build_chunk_context_window(chunks, index, window_size)
         context = generate_chunk_context(context_window, chunk)
         results.append((chunk, context))
