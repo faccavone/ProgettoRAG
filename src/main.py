@@ -35,7 +35,7 @@ def chatbot_interface(question):
     image_paths = []
     for doc in image_results:
         path = doc.get("image_path")
-        if path:
+        if path: #ciao
             exists = os.path.exists(path)
             if exists:
                 image_paths.append(path)
